@@ -44,6 +44,8 @@ from streamlit_pages.ui_components import ui_components_tab
 from streamlit_pages.n8n_integration import n8n_integration_tab, n8n_knowledge_base
 from streamlit_pages.logo_uploader import logo_uploader_tab
 from streamlit_pages.openmanus_integration import openmanus_tab as owaiken_os_tab
+from streamlit_pages.subscription_management import subscription_page
+from streamlit_pages.auth_system import initialize_auth_system, get_current_user
 
 # Load environment variables from .env file
 load_dotenv()
@@ -117,6 +119,9 @@ logfire.configure(send_to_logfire='never')
 
 async def main():
     try:
+        # Initialize authentication system
+        user = initialize_auth_system()
+        
         # Check if license is valid
         license_manager = get_license_manager()
         license_valid = False
@@ -206,8 +211,15 @@ async def main():
             if "show_all_components" not in st.session_state:
                 st.session_state.show_all_components = False
             
+            # Display user info if logged in
+            user = get_current_user()
+            if user:
+                st.write(f"Logged in as: {user.get('firstName', '')} {user.get('lastName', '')}")
+                st.button("Logout", key="logout_button", on_click=lambda: st.session_state.pop("clerk_token", None))
+            
             # Vertical navigation buttons
             owaiken_os_button = st.button("Owaiken OS", use_container_width=True, key="owaiken_os_button")
+            subscription_button = st.button("Subscription", use_container_width=True, key="subscription_button")
             license_button = st.button("License", use_container_width=True, key="license_button")
             intro_button = st.button("Intro", use_container_width=True, key="intro_button")
             chat_button = st.button("Chat", use_container_width=True, key="chat_button")
@@ -225,6 +237,8 @@ async def main():
             # Update selected tab based on button clicks
             if owaiken_os_button:
                 st.session_state.selected_tab = "Owaiken OS"
+            elif subscription_button:
+                st.session_state.selected_tab = "Subscription"
             elif license_button:
                 st.session_state.selected_tab = "License"
             elif intro_button:
@@ -296,6 +310,9 @@ async def main():
         elif st.session_state.selected_tab == "Owaiken OS":
             st.title("Owaiken OS")
             owaiken_os_tab()
+        elif st.session_state.selected_tab == "Subscription":
+            st.title("Owaiken - Subscription Management")
+            subscription_page()
         elif st.session_state.selected_tab == "Logo Uploader":
             st.title("Owaiken - Logo Uploader")
             logo_uploader_tab()
