@@ -52,6 +52,14 @@ httpx-sse==0.4.0
 qrcode==7.4.2
 requests==2.31.0
 stripe==7.8.1
+pyotp==2.9.0
+redis==5.0.1
+loguru==0.7.2
+cryptography==43.0.3
+pyjwt==2.8.0
+passlib==1.7.4
+argon2-cffi==23.1.0
+csrf==0.1b1
 huggingface-hub==0.27.1
 hyperframe==6.0.1
 idna==3.10

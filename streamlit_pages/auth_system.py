@@ -10,12 +10,17 @@ import time
 from datetime import datetime, timedelta
 import requests
 from supabase import create_client, Client
+
+# Import comprehensive security system
 from streamlit_pages.security_config import (
     get_secure_supabase_client,
     SecureQueryBuilder,
     sanitize_input,
     initialize_database_security
 )
+from streamlit_pages.security_manager import get_security_manager, initialize_security
+from streamlit_pages.security_logging import SecurityEventType, SecuritySeverity
+from streamlit_pages.mfa_support import display_mfa_enrollment, display_mfa_verification
 
 # Use secure Supabase client
 def get_supabase_client():
@@ -40,17 +45,42 @@ def get_clerk_token():
     return None
 
 def verify_clerk_token(token):
-    """Verify Clerk token with Clerk API"""
+    """Verify Clerk token with Clerk API with enhanced security"""
     if not token:
         return None
+    
+    # Get security manager for logging
+    security_manager = get_security_manager()
     
     clerk_api_key = st.secrets.get("CLERK_SECRET_KEY", os.environ.get("CLERK_SECRET_KEY", ""))
     if not clerk_api_key:
         st.warning("Clerk API key not found. Running in demo mode.")
         # In demo mode, accept any token
-        return {"id": "demo_user", "email": "demo@example.com", "firstName": "Demo", "lastName": "User"}
+        demo_user = {"id": "demo_user", "email": "demo@example.com", "firstName": "Demo", "lastName": "User"}
+        
+        # Log demo login
+        security_manager.log_security_event(
+            event_type=SecurityEventType.LOGIN_SUCCESS,
+            user_id="demo_user",
+            severity=SecuritySeverity.INFO,
+            details={"mode": "demo"},
+            source_ip=st.session_state.get("client_ip", "unknown")
+        )
+        
+        return demo_user
     
     try:
+        # Apply rate limiting to prevent brute force attacks
+        rate_limit_result = security_manager.rate_limit(
+            user_id="anonymous",  # We don't know the user yet
+            tier="free",
+            endpoint="token_verification"
+        )
+        
+        if rate_limit_result["is_limited"]:
+            st.error("Too many verification attempts. Please try again later.")
+            return None
+        
         headers = {
             "Authorization": f"Bearer {clerk_api_key}",
             "Content-Type": "application/json"
@@ -62,11 +92,37 @@ def verify_clerk_token(token):
         )
         
         if response.status_code == 200:
-            return response.json()
+            user_data = response.json()
+            
+            # Log successful verification
+            security_manager.log_login(
+                user_id=user_data.get("id", "unknown"),
+                success=True,
+                source_ip=st.session_state.get("client_ip", "unknown")
+            )
+            
+            return user_data
         else:
+            # Log failed verification
+            security_manager.log_security_event(
+                event_type=SecurityEventType.LOGIN_FAILURE,
+                severity=SecuritySeverity.MEDIUM,
+                details={"status_code": response.status_code},
+                source_ip=st.session_state.get("client_ip", "unknown")
+            )
+            
             return None
     except Exception as e:
         st.error(f"Error verifying token: {str(e)}")
+        
+        # Log error
+        security_manager.log_security_event(
+            event_type=SecurityEventType.LOGIN_FAILURE,
+            severity=SecuritySeverity.HIGH,
+            details={"error": str(e)},
+            source_ip=st.session_state.get("client_ip", "unknown")
+        )
+        
         return None
 
 def get_current_user():
@@ -182,7 +238,11 @@ def subscription_required(func):
     return wrapper
 
 def display_login_ui():
-    """Display login UI using Clerk"""
+    """Display login UI using Clerk with enhanced security"""
+    # Get security manager for CSP nonce
+    security_manager = get_security_manager()
+    csp_nonce = security_manager.csp_nonce
+    
     clerk_publishable_key = st.secrets.get("CLERK_PUBLISHABLE_KEY", os.environ.get("CLERK_PUBLISHABLE_KEY", ""))
     
     if not clerk_publishable_key:
@@ -194,16 +254,24 @@ def display_login_ui():
             submit = st.form_submit_button("Log In")
             
             if submit:
-                # In demo mode, accept any credentials
+                # In demo mode, accept any credentials but log the attempt
                 st.session_state.clerk_token = "demo_token"
+                
+                # Log demo login attempt
+                security_manager.log_login(
+                    user_id="demo_user",
+                    success=True,
+                    source_ip=st.session_state.get("client_ip", "unknown")
+                )
+                
                 st.rerun()
         return
     
-    # Display Clerk sign-in component
+    # Display Clerk sign-in component with CSP nonce for script security
     st.markdown(f"""
     <div id="clerk-sign-in"></div>
-    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
-    <script>
+    <script nonce="{csp_nonce}" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+    <script nonce="{csp_nonce}">
         const clerk = Clerk('{clerk_publishable_key}');
         clerk.mountSignIn(document.getElementById('clerk-sign-in'));
         
@@ -211,6 +279,15 @@ def display_login_ui():
         clerk.on('signed-in', (user) => {{
             // Redirect with token
             window.location.href = window.location.pathname + '?clerk_token=' + clerk.session.token;
+        }});
+        
+        // Add security event listeners
+        clerk.on('sign-in-attempt', () => {{
+            console.log('Sign-in attempt');
+        }});
+        
+        clerk.on('sign-in-attempt-failed', () => {{
+            console.log('Sign-in attempt failed');
         }});
     </script>
     """, unsafe_allow_html=True)
@@ -332,7 +409,10 @@ def handle_payment_success():
             st.query_params.clear()
 
 def initialize_auth_system():
-    """Initialize the authentication system with security features"""
+    """Initialize the authentication system with comprehensive security features"""
+    # Initialize comprehensive security system
+    security_manager = initialize_security()
+    
     # Initialize database security
     initialize_database_security()
     
@@ -342,9 +422,24 @@ def initialize_auth_system():
     # Check for user in session
     user = get_current_user()
     
+    # Log user session information if user is authenticated
+    if user:
+        security_manager.log_login(
+            user_id=user.get("id", "unknown"),
+            success=True,
+            source_ip=st.session_state.get("client_ip", "unknown")
+        )
+        
+        # Store user ID in session state for rate limiting
+        st.session_state.user_id = user.get("id", "anonymous")
+    
     # Initialize session state for auth
     if "auth_initialized" not in st.session_state:
         st.session_state.auth_initialized = True
+        
+        # Try to get client IP from request headers for security logging
+        if hasattr(st, "request"):
+            st.session_state.client_ip = st.request.headers.get("X-Forwarded-For", "unknown")
         
         # Initialize Supabase tables if needed
         supabase = get_supabase_client()
@@ -364,7 +459,22 @@ def initialize_auth_system():
                     "payment_id": "text not null",
                     "amount": "integer not null",
                     "created_at": "timestamp not null default now()",
-                    "expires_at": "timestamp not null"
+                    "expires_at": "timestamp not null",
+                    "mfa_enabled": "boolean default false",
+                    "mfa_secret": "text",
+                    "recovery_codes": "jsonb"
+                })
+                
+                # Create security_logs table for audit trail
+                supabase.table("security_logs").create({
+                    "id": "uuid primary key default uuid_generate_v4()",
+                    "timestamp": "timestamp not null default now()",
+                    "user_id": "text",
+                    "event_type": "text not null",
+                    "severity": "text not null",
+                    "source_ip": "text",
+                    "details": "jsonb",
+                    "hash": "text not null"
                 })
     
     return user
