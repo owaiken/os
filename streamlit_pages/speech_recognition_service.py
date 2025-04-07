@@ -9,6 +9,8 @@ import base64
 import requests
 import json
 import time
+import secrets
+import stat
 from pathlib import Path
 import openai
 from dotenv import load_dotenv
