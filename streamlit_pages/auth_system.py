@@ -10,22 +10,17 @@ import time
 from datetime import datetime, timedelta
 import requests
 from supabase import create_client, Client
+from streamlit_pages.security_config import (
+    get_secure_supabase_client,
+    SecureQueryBuilder,
+    sanitize_input,
+    initialize_database_security
+)
 
-# Initialize Supabase client
+# Use secure Supabase client
 def get_supabase_client():
-    """Get Supabase client from environment variables or secrets"""
-    supabase_url = st.secrets.get("SUPABASE_URL", os.environ.get("SUPABASE_URL", ""))
-    supabase_key = st.secrets.get("SUPABASE_KEY", os.environ.get("SUPABASE_KEY", ""))
-    
-    if not supabase_url or not supabase_key:
-        st.warning("Supabase credentials not found. Running in demo mode.")
-        return None
-    
-    try:
-        return create_client(supabase_url, supabase_key)
-    except Exception as e:
-        st.error(f"Error connecting to Supabase: {str(e)}")
-        return None
+    """Get secure Supabase client from environment variables or secrets"""
+    return get_secure_supabase_client()
 
 # Initialize Clerk client
 def get_clerk_token():
@@ -97,7 +92,9 @@ def check_subscription(user_id):
         }
     
     try:
-        response = supabase.table("subscriptions").select("*").eq("user_id", user_id).execute()
+        # Use secure query builder to prevent SQL injection
+        secure_query = SecureQueryBuilder(supabase, "subscriptions")
+        response = secure_query.select("*").eq("user_id", sanitize_input(user_id)).execute()
         subscriptions = response.data
         
         if not subscriptions:
@@ -136,18 +133,20 @@ def create_subscription(user_id, plan, payment_id, amount):
         # Calculate expiration date (30 days from now)
         expires_at = (datetime.now() + timedelta(days=30)).isoformat()
         
-        # Create subscription record
+        # Create subscription record with sanitized inputs
         subscription_data = {
-            "user_id": user_id,
-            "plan": plan,
+            "user_id": sanitize_input(user_id),
+            "plan": sanitize_input(plan),
             "status": "active",
-            "payment_id": payment_id,
-            "amount": amount,
+            "payment_id": sanitize_input(payment_id),
+            "amount": amount,  # Numeric value doesn't need sanitization
             "created_at": datetime.now().isoformat(),
             "expires_at": expires_at
         }
         
-        response = supabase.table("subscriptions").insert(subscription_data).execute()
+        # Use secure query builder to prevent SQL injection
+        secure_query = SecureQueryBuilder(supabase, "subscriptions")
+        response = secure_query.insert(subscription_data).execute()
         return response.data[0] if response.data else None
     except Exception as e:
         st.error(f"Error creating subscription: {str(e)}")
@@ -333,7 +332,10 @@ def handle_payment_success():
             st.query_params.clear()
 
 def initialize_auth_system():
-    """Initialize the authentication system"""
+    """Initialize the authentication system with security features"""
+    # Initialize database security
+    initialize_database_security()
+    
     # Handle payment success
     handle_payment_success()
     
@@ -348,19 +350,20 @@ def initialize_auth_system():
         supabase = get_supabase_client()
         if supabase:
             try:
-                # Check if subscriptions table exists
-                response = supabase.table("subscriptions").select("count").limit(1).execute()
+                # Check if subscriptions table exists using secure query builder
+                secure_query = SecureQueryBuilder(supabase, "subscriptions")
+                response = secure_query.select("count").limit(1).execute()
                 # If no error, table exists
             except Exception:
-                # Create subscriptions table
+                # Create subscriptions table with proper schema for RLS
                 supabase.table("subscriptions").create({
-                    "id": "uuid primary key",
+                    "id": "uuid primary key default uuid_generate_v4()",
                     "user_id": "text not null",
                     "plan": "text not null",
                     "status": "text not null",
                     "payment_id": "text not null",
                     "amount": "integer not null",
-                    "created_at": "timestamp not null",
+                    "created_at": "timestamp not null default now()",
                     "expires_at": "timestamp not null"
                 })
     
