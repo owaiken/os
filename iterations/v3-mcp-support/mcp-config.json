@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "owaiken": {
+      "command": "[path to Owaiken]\\owaiken\\venv\\Scripts\\python.exe",
+      "args": [
+        "[path to Owaiken]\\owaiken\\mcp_server.py"
+      ]
+    }
+  }
+}

@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owaiken UI with Shadcn Components</title>
+    <style>
+        :root {
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            --primary: #000000;
+            --primary-foreground: #ffffff;
+            --secondary: #444444;
+            --secondary-foreground: #ffffff;
+            --background: #ffffff;
+            --foreground: #000000;
+            --muted: #f1f5f9;
+            --muted-foreground: #64748b;
+            --accent: #f1f5f9;
+            --accent-foreground: #0f172a;
+            --destructive: #ef4444;
+            --destructive-foreground: #ffffff;
+            --border: #e2e8f0;
+            --input: #e2e8f0;
+            --ring: #000000;
+            --radius: 0.5rem;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--background);
+            color: var(--foreground);
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .dark {
+            --background: #020817;
+            --foreground: #ffffff;
+            --muted: #1e293b;
+            --muted-foreground: #94a3b8;
+            --accent: #1e293b;
+            --accent-foreground: #ffffff;
+            --border: #1e293b;
+            --input: #1e293b;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.125rem;
+            color: var(--muted-foreground);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+        }
+
+        .tab.active {
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .section h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        /* Button styles */
+        .shadcn-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius);
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            margin: 0.25rem;
+        }
+
+        .shadcn-button.primary {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+            border: none;
+        }
+
+        .shadcn-button.secondary {
+            background-color: var(--secondary);
+            color: var(--secondary-foreground);
+            border: none;
+        }
+
+        .shadcn-button.destructive {
+            background-color: var(--destructive);
+            color: var(--destructive-foreground);
+            border: none;
+        }
+
+        .shadcn-button.outline {
+            background-color: transparent;
+            color: var(--foreground);
+            border: 1px solid var(--border);
+        }
+
+        .shadcn-button.ghost {
+            background-color: transparent;
+            color: var(--foreground);
+            border: none;
+        }
+
+        .shadcn-button:hover {
+            opacity: 0.9;
+        }
+
+        /* Card styles */
+        .shadcn-card {
+            background-color: var(--background);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+
+        .shadcn-card-header {
+            margin-bottom: 1rem;
+        }
+
+        .shadcn-card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .shadcn-card-description {
+            color: var(--muted-foreground);
+            font-size: 0.875rem;
+        }
+
+        .shadcn-card-content {
+            margin-bottom: 1rem;
+        }
+
+        .shadcn-card-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Input styles */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .shadcn-input {
+            width: 100%;
+            border-radius: var(--radius);
+            border: 1px solid var(--input);
+            background-color: transparent;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .shadcn-input:focus {
+            outline: none;
+            border-color: var(--ring);
+            box-shadow: 0 0 0 1px var(--ring);
+        }
+
+        /* Badge styles */
+        .shadcn-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 9999px;
+            padding: 0.125rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+
+        .shadcn-badge.default {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+        }
+
+        .shadcn-badge.secondary {
+            background-color: var(--secondary);
+            color: var(--secondary-foreground);
+        }
+
+        .shadcn-badge.outline {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--foreground);
+        }
+
+        .shadcn-badge.destructive {
+            background-color: var(--destructive);
+            color: var(--destructive-foreground);
+        }
+
+        /* Alert styles */
+        .shadcn-alert {
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+        }
+
+        .shadcn-alert.default {
+            background-color: var(--muted);
+            border-left-color: var(--primary);
+        }
+
+        .shadcn-alert.success {
+            background-color: #dcfce7;
+            border-left-color: #22c55e;
+        }
+
+        .shadcn-alert.warning {
+            background-color: #fef9c3;
+            border-left-color: #eab308;
+        }
+
+        .shadcn-alert.destructive {
+            background-color: #fee2e2;
+            border-left-color: var(--destructive);
+        }
+
+        /* Switch styles */
+        .shadcn-switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+            margin-right: 0.5rem;
+        }
+
+        .shadcn-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .shadcn-switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--muted);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .shadcn-switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .shadcn-switch-slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .shadcn-switch-slider:before {
+            transform: translateX(16px);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Theme toggle */
+        .theme-toggle {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Logo */
+        .logo {
+            max-width: 250px;
+            margin-bottom: 1rem;
+        }
+
+        /* Sidebar */
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            border-right: 1px solid var(--border);
+            padding: 1.5rem;
+            background-color: var(--muted);
+        }
+
+        .sidebar-nav {
+            margin-top: 2rem;
+        }
+
+        .sidebar-nav-item {
+            display: block;
+            padding: 0.5rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: var(--radius);
+            color: var(--foreground);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .sidebar-nav-item:hover {
+            background-color: var(--accent);
+        }
+
+        .sidebar-nav-item.active {
+            background-color: var(--primary);
+            color: var(--primary-foreground);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <div class="sidebar">
+            <div class="logo-container">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUwIiBoZWlnaHQ9IjI1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAgIDxwYXRoIGQ9Ik0xMjUgMjVDNjkuNzcgMjUgMjUgNjkuNzcgMjUgMTI1YzAgNTUuMjMgNDQuNzcgMTAwIDEwMCAxMDBzMTAwLTQ0Ljc3IDEwMC0xMDBjMC01NS4yMy00NC43Ny0xMDAtMTAwLTEwMHptMCAxODJjLTQ1LjI4IDAtODItMzYuNzItODItODJzMzYuNzItODIgODItODIgODIgMzYuNzIgODIgODItMzYuNzIgODItODIgODJ6IiBmaWxsPSIjMDAwIi8+CiAgICA8cGF0aCBkPSJNMTI1IDYzYy0zNC4xOCAwLTYyIDI3LjgyLTYyIDYyczI3LjgyIDYyIDYyIDYyIDYyLTI3LjgyIDYyLTYyLTI3LjgyLTYyLTYyLTYyem0wIDEwNGMtMjMuMTYgMC00Mi0xOC44NC00Mi00MnMxOC44NC00MiA0Mi00MiA0MiAxOC44NCA0MiA0Mi0xOC44NCA0Mi00MiA0MnoiIGZpbGw9IiMwMDAiLz4KICAgIDxwYXRoIGQ9Ik0xMjUgODNjLTIzLjE2IDAtNDIgMTguODQtNDIgNDJzMTguODQgNDIgNDIgNDIgNDItMTguODQgNDItNDItMTguODQtNDItNDItNDJ6bTAgNjRjLTEyLjE1IDAtMjItOS44NS0yMi0yMnM5Ljg1LTIyIDIyLTIyIDIyIDkuODUgMjIgMjItOS44NSAyMi0yMiAyMnoiIGZpbGw9IiMwMDAiLz4KPC9zdmc+" alt="Owaiken Logo" class="logo">
+            </div>
+            
+            <div class="sidebar-nav">
+                <a href="#" class="sidebar-nav-item">License</a>
+                <a href="#" class="sidebar-nav-item">Intro</a>
+                <a href="#" class="sidebar-nav-item">Chat</a>
+                <a href="#" class="sidebar-nav-item">Environment</a>
+                <a href="#" class="sidebar-nav-item">Database</a>
+                <a href="#" class="sidebar-nav-item">Documentation</a>
+                <a href="#" class="sidebar-nav-item">Agent Service</a>
+                <a href="#" class="sidebar-nav-item">MCP</a>
+                <a href="#" class="sidebar-nav-item active">UI Components</a>
+                <a href="#" class="sidebar-nav-item">Future Enhancements</a>
+            </div>
+            
+            <div style="margin-top: 2rem;">
+                <div style="font-weight: 500; margin-bottom: 0.5rem;">Theme Settings</div>
+                <div class="theme-toggle">
+                    <button class="shadcn-button outline" onclick="setLightTheme()">🌞 Light</button>
+                    <button class="shadcn-button primary" onclick="setDarkTheme()">🌙 Dark</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="header">
+                <h1>Owaiken UI Components</h1>
+                <p>This is a preview of how Shadcn UI components will look in your Owaiken application.</p>
+            </div>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('overview')">Overview</div>
+                <div class="tab" onclick="showTab('basic')">Basic Components</div>
+                <div class="tab" onclick="showTab('form')">Form Elements</div>
+                <div class="tab" onclick="showTab('layout')">Layout Components</div>
+            </div>
+            
+            <div id="overview" class="tab-content active">
+                <div class="section">
+                    <h2>Overview</h2>
+                    <p>Shadcn UI provides a set of accessible, reusable, and composable components that can be used to build modern web applications. These components are designed to be:</p>
+                    <ul>
+                        <li><strong>Accessible:</strong> All components follow WAI-ARIA guidelines</li>
+                        <li><strong>Responsive:</strong> Components adapt to different screen sizes</li>
+                        <li><strong>Customizable:</strong> Easy to customize with CSS variables</li>
+                        <li><strong>Consistent:</strong> Uniform design language across all components</li>
+                    </ul>
+                    
+                    <div class="shadcn-card">
+                        <div class="shadcn-card-header">
+                            <div class="shadcn-card-title">Key Features</div>
+                            <div class="shadcn-card-description">What makes Shadcn UI special</div>
+                        </div>
+                        <div class="shadcn-card-content">
+                            <ul>
+                                <li>Modern design with clean aesthetics</li>
+                                <li>Dark and light mode support</li>
+                                <li>Keyboard navigation support</li>
+                                <li>Responsive and mobile-friendly</li>
+                                <li>Seamless integration with Streamlit</li>
+                            </ul>
+                        </div>
+                        <div class="shadcn-card-footer">
+                            <button class="shadcn-button primary" onclick="showTab('basic')">Explore Components</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="basic" class="tab-content">
+                <div class="section">
+                    <h2>Basic Components</h2>
+                    
+                    <div class="grid">
+                        <div>
+                            <h3>Buttons</h3>
+                            <button class="shadcn-button primary">Primary Button</button>
+                            <button class="shadcn-button secondary">Secondary Button</button>
+                            <button class="shadcn-button destructive">Destructive Button</button>
+                            <button class="shadcn-button outline">Outline Button</button>
+                            <button class="shadcn-button ghost">Ghost Button</button>
+                            
+                            <h3 style="margin-top: 2rem;">Badges</h3>
+                            <span class="shadcn-badge default">Default</span>
+                            <span class="shadcn-badge secondary">Secondary</span>
+                            <span class="shadcn-badge outline">Outline</span>
+                            <span class="shadcn-badge destructive">Destructive</span>
+                        </div>
+                        
+                        <div>
+                            <h3>Alerts</h3>
+                            <div class="shadcn-alert default">
+                                <strong>Information:</strong> This is an informational alert.
+                            </div>
+                            <div class="shadcn-alert success">
+                                <strong>Success:</strong> Operation completed successfully.
+                            </div>
+                            <div class="shadcn-alert warning">
+                                <strong>Warning:</strong> This action cannot be undone.
+                            </div>
+                            <div class="shadcn-alert destructive">
+                                <strong>Error:</strong> Something went wrong.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="form" class="tab-content">
+                <div class="section">
+                    <h2>Form Elements</h2>
+                    
+                    <div class="grid">
+                        <div>
+                            <h3>Input Fields</h3>
+                            <div class="form-group">
+                                <label for="username">Username</label>
+                                <input class="shadcn-input" id="username" placeholder="Enter your username" />
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input class="shadcn-input" id="email" type="email" placeholder="Enter your email" />
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="password">Password</label>
+                                <input class="shadcn-input" id="password" type="password" placeholder="Enter your password" />
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3>Switches</h3>
+                            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                                <label class="shadcn-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="shadcn-switch-slider"></span>
+                                </label>
+                                <span>Notifications</span>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                                <label class="shadcn-switch">
+                                    <input type="checkbox">
+                                    <span class="shadcn-switch-slider"></span>
+                                </label>
+                                <span>Dark Mode</span>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                                <label class="shadcn-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="shadcn-switch-slider"></span>
+                                </label>
+                                <span>Email Updates</span>
+                            </div>
+                            
+                            <h3 style="margin-top: 2rem;">Form Actions</h3>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="shadcn-button primary">Submit</button>
+                                <button class="shadcn-button outline">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="layout" class="tab-content">
+                <div class="section">
+                    <h2>Layout Components</h2>
+                    
+                    <h3>Cards</h3>
+                    <div class="grid">
+                        <div class="shadcn-card">
+                            <div class="shadcn-card-header">
+                                <div class="shadcn-card-title">Feature Card</div>
+                                <div class="shadcn-card-description">A card showcasing a feature</div>
+                            </div>
+                            <div class="shadcn-card-content">
+                                <p>This card contains information about a feature. Cards are useful for organizing related content and actions.</p>
+                            </div>
+                            <div class="shadcn-card-footer">
+                                <button class="shadcn-button outline">Learn More</button>
+                            </div>
+                        </div>
+                        
+                        <div class="shadcn-card">
+                            <div class="shadcn-card-header">
+                                <div class="shadcn-card-title">Pricing Card</div>
+                                <div class="shadcn-card-description">A card showing pricing information</div>
+                            </div>
+                            <div class="shadcn-card-content">
+                                <h3>$99/month</h3>
+                                <p>All features included</p>
+                                <ul>
+                                    <li>Feature 1</li>
+                                    <li>Feature 2</li>
+                                    <li>Feature 3</li>
+                                </ul>
+                            </div>
+                            <div class="shadcn-card-footer">
+                                <button class="shadcn-button primary">Subscribe</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <div>Owaiken UI Preview</div>
+                <div class="theme-toggle">
+                    <button class="shadcn-button outline" onclick="setLightTheme()">Light</button>
+                    <button class="shadcn-button primary" onclick="setDarkTheme()">Dark</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function showTab(tabId) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Show the selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Update tab buttons
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Find the clicked tab and make it active
+            const clickedTab = Array.from(tabs).find(tab => {
+                return tab.onclick.toString().includes(tabId);
+            });
+            
+            if (clickedTab) {
+                clickedTab.classList.add('active');
+            }
+        }
+        
+        function setDarkTheme() {
+            document.body.classList.add('dark');
+        }
+        
+        function setLightTheme() {
+            document.body.classList.remove('dark');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+# Folders
+workbench
+__pycache__
+venv
+.langgraph_api
+.streamlit
+temp
+.vscode
+.idea
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Files
+.env
+.env.temp
+.env.test
+env_vars.json
+*.log
+.DS_Store
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Security and API keys
+*.pem
+*.key
+
+# Temporary files
+temp/
+*.wav
+*.mp3
+*.m4a

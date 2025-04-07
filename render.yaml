@@ -1,0 +1,14 @@
+services:
+  # A web service for the Owaiken Streamlit application
+  - type: web
+    name: owaiken
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run streamlit_ui.py
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: OPENAI_API_KEY
+        sync: false # This means you'll need to set this in the Render dashboard
+    autoDeploy: true # Enable automatic deployments from GitHub
+    plan: free # Start with the free plan, can upgrade later
