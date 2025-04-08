@@ -421,4 +421,5 @@ def get_clients():
         if not supabase_key:
             missing.append("Supabase key (tried SUPABASE_SERVICE_KEY, SUPABASE_KEY, SUPABASE_ANON_KEY)")
         print(f"Supabase connection failed: Missing {', '.join(missing)}")
-return embedding_client, supabase      
+
+    return embedding_client, supabase
