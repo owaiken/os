@@ -96,8 +96,19 @@ except Exception as e:
 
 # Initialize clients safely
 try:
-    # Initialize clients
+    # First try the standard method
     openai_client, supabase = get_clients()
+    
+    # If Supabase is None, try the direct connection method
+    if supabase is None:
+        try:
+            from supabase_connector import get_direct_supabase_client
+            supabase = get_direct_supabase_client()
+            if supabase:
+                print("Successfully connected to Supabase using direct connector")
+        except Exception as e:
+            print(f"Direct Supabase connection failed: {str(e)}")
+            
 except Exception as e:
     st.warning(f"Warning: Could not initialize some clients. Error: {str(e)}")
     openai_client, supabase = None, None
