@@ -398,7 +398,7 @@ def get_clients():
     # Supabase client setup
     supabase = None
     supabase_url = get_env_var("SUPABASE_URL")
-    supabase_key = get_env_var("SUPABASE_KEY")
+    supabase_key = get_env_var("SUPABASE_SERVICE_KEY")
     if supabase_url and supabase_key:
         try:
             supabase: Client = Client(supabase_url, supabase_key)
