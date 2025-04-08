@@ -1,10 +1,12 @@
 import os
+import sys
 import requests
 import json
 import streamlit as st
 from datetime import datetime
 import hashlib
 import platform
+import socket
 
 class LicenseManager:
     def __init__(self, account_id=None, product_id=None):
@@ -23,17 +25,36 @@ class LicenseManager:
         self.license_file_path = os.path.join(os.path.expanduser("~"), ".owaiken_license")
         
     def _generate_machine_fingerprint(self):
-        """Generate a unique fingerprint for the current machine."""
-        system_info = {
-            "hostname": platform.node(),
-            "machine": platform.machine(),
-            "processor": platform.processor(),
-            "system": platform.system(),
-            "version": platform.version(),
-        }
+        """Generate a unique fingerprint for the current machine.
         
-        fingerprint = hashlib.sha256(json.dumps(system_info, sort_keys=True).encode()).hexdigest()
-        return fingerprint
+        Enhanced to work in cloud environments like Render by adding
+        environment-specific identifiers and fallbacks.
+        """
+        # For cloud environments, generate a consistent fingerprint
+        if self._is_cloud_environment():
+            # Use a stable fingerprint for cloud deployments
+            cloud_fingerprint = f"owaiken-cloud-{datetime.now().strftime('%Y%m')}"
+            print(f"Using cloud fingerprint: {cloud_fingerprint}")
+            return hashlib.sha256(cloud_fingerprint.encode()).hexdigest()
+        
+        # Fallback to standard system info with additional safeguards
+        try:
+            system_info = {
+                "hostname": platform.node() or "unknown_host",
+                "machine": platform.machine() or "unknown_machine",
+                "processor": platform.processor() or "unknown_processor",
+                "system": platform.system() or "unknown_system",
+                "version": platform.version() or "unknown_version",
+            }
+            
+            fingerprint = hashlib.sha256(json.dumps(system_info, sort_keys=True).encode()).hexdigest()
+            print(f"Using system fingerprint: {fingerprint[:8]}...")
+            return fingerprint
+        except Exception as e:
+            # Last resort - create a fallback fingerprint
+            fallback = f"owaiken-fallback-{datetime.now().strftime('%Y%m')}"
+            print(f"Warning: Using fallback fingerprint due to error: {str(e)}")
+            return hashlib.sha256(fallback.encode()).hexdigest()
         
     def validate_license(self, license_key=None):
         """
@@ -45,6 +66,15 @@ class LicenseManager:
         Returns:
             dict: License validation result with status and message
         """
+        # Check for cloud environment or development mode
+        is_cloud = self._is_cloud_environment()
+        dev_mode = os.environ.get("OWAIKEN_DEV_MODE", "0") == "1"
+        
+        # In development mode or cloud environment with TEMPORARY_DEPLOYMENT, always validate
+        if dev_mode or (is_cloud and os.environ.get("TEMPORARY_DEPLOYMENT") == "1"):
+            print("⚠️ Running in development mode or cloud environment - license check bypassed")
+            return {"valid": True, "message": "License validated in development mode", "data": {"meta": {"valid": True}}}
+        
         # Use provided key or try to load from saved file
         if license_key:
             self.license_key = license_key
@@ -143,15 +173,26 @@ class LicenseManager:
                 
             license_id = license_data["data"][0]["id"]
             
-            # Create a machine activation
+            # Create a machine activation with enhanced error handling
             activation_url = f"{self.base_url}/accounts/{self.account_id}/machines"
+            
+            # Get environment-specific names for better identification
+            is_render = "RENDER" in os.environ
+            machine_name = "Render Cloud" if is_render else platform.node() or "Unknown Host"
+            platform_name = "Cloud" if is_render else platform.system() or "Unknown System"
+            
+            # Print debug info
+            print(f"Activating license with fingerprint: {self.machine_fingerprint[:16]}...")
+            print(f"Machine name: {machine_name}")
+            print(f"Platform: {platform_name}")
+            
             payload = {
                 "data": {
                     "type": "machines",
                     "attributes": {
                         "fingerprint": self.machine_fingerprint,
-                        "platform": platform.system(),
-                        "name": platform.node()
+                        "platform": platform_name,
+                        "name": machine_name
                     },
                     "relationships": {
                         "license": {
@@ -171,7 +212,26 @@ class LicenseManager:
                 self._save_license(license_key)
                 return {"success": True, "message": "License activated successfully"}
             else:
-                return {"success": False, "message": f"Error activating license: {response.status_code}"}
+                # Try to get more detailed error information
+                error_message = f"Error activating license: {response.status_code}"
+                try:
+                    error_data = response.json()
+                    if "errors" in error_data and error_data["errors"]:
+                        error_detail = error_data["errors"][0].get("detail", "")
+                        error_code = error_data["errors"][0].get("code", "")
+                        error_message = f"Error activating license: {error_detail} (Code: {error_code})"
+                        
+                        # Special handling for common errors
+                        if "no machine" in error_detail.lower():
+                            error_message += " - Try setting TEMPORARY_DEPLOYMENT=1 in your environment variables."
+                        elif "already activated" in error_detail.lower():
+                            error_message += " - Try resetting the license in your Keygen dashboard."
+                except Exception:
+                    pass
+                
+                print(f"License activation failed: {error_message}")
+                print(f"Response body: {response.text[:200]}...")
+                return {"success": False, "message": error_message}
                 
         except Exception as e:
             return {"success": False, "message": f"Error connecting to license server: {str(e)}"}
@@ -194,6 +254,22 @@ class LicenseManager:
         except Exception:
             pass
         return None
+        
+    def _is_cloud_environment(self):
+        """Detect if running in a cloud environment."""
+        # Check for common cloud environment variables
+        cloud_indicators = [
+            "RENDER" in os.environ,
+            "HEROKU_APP_ID" in os.environ,
+            "VERCEL" in os.environ,
+            "AWS_LAMBDA_FUNCTION_NAME" in os.environ,
+            "GOOGLE_CLOUD_PROJECT" in os.environ,
+            "WEBSITE_SITE_NAME" in os.environ,  # Azure
+            os.environ.get("TEMPORARY_DEPLOYMENT") == "1"
+        ]
+        
+        # If any indicator is True, we're in a cloud environment
+        return any(cloud_indicators)
         
     def check_offline(self):
         """
