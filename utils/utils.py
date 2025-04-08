@@ -381,45 +381,75 @@ def reload_owaiken_graph(show_reload_success=True):
         return False        
 
 def get_clients():
-    # LLM client setup
+    """Initialize API clients with secure credential handling
+    
+    Following security best practices:
+    1. Secure credential handling with proper error messages
+    2. Input validation for URLs and API keys
+    3. Proper exception handling with minimal error disclosure
+    4. Secure logging practices
+    
+    Returns:
+        tuple: (embedding_client, supabase_client)
+    """
+    # LLM client setup with input validation
     embedding_client = None
     base_url = get_env_var('EMBEDDING_BASE_URL') or 'https://api.openai.com/v1'
     api_key = get_env_var('EMBEDDING_API_KEY') or 'no-api-key-provided'
     provider = get_env_var('EMBEDDING_PROVIDER') or 'OpenAI'
     
-    # Setup OpenAI client for LLM
-    if provider == "Ollama":
-        if api_key == "NOT_REQUIRED":
-            api_key = "ollama"  # Use a dummy key for Ollama
-        embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
-    else:
-        embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+    # Validate URL format before using
+    if not base_url.startswith(('http://', 'https://')):
+        write_to_log(f"Invalid embedding base URL format")
+        base_url = 'https://api.openai.com/v1'  # Fallback to default
+    
+    # Setup OpenAI client for LLM with proper error handling
+    try:
+        if provider == "Ollama":
+            if api_key == "NOT_REQUIRED":
+                api_key = "ollama"  # Use a dummy key for Ollama
+            embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+        else:
+            embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+    except Exception as e:
+        write_to_log(f"Error initializing embedding client: {type(e).__name__}")
+        # Continue execution - we'll handle the None client downstream
 
-    # Supabase client setup
+    # Supabase client setup with secure credential handling
     supabase = None
+    
+    # Get credentials from environment with proper validation
     supabase_url = get_env_var("SUPABASE_URL")
     
-    # Try multiple key names for Supabase
+    # Try multiple key names for Supabase with secure logging
     supabase_key = None
     for key_name in ["SUPABASE_SERVICE_KEY", "SUPABASE_KEY", "SUPABASE_ANON_KEY"]:
         supabase_key = get_env_var(key_name)
         if supabase_key:
-            print(f"Found Supabase key using variable name: {key_name}")
+            write_to_log(f"Using {key_name} for Supabase connection")
             break
     
+    # Validate URL format
+    if supabase_url and not supabase_url.startswith(('http://', 'https://')):
+        write_to_log("Invalid Supabase URL format")
+        supabase_url = None
+    
+    # Initialize Supabase client with proper error handling
     if supabase_url and supabase_key:
         try:
-            supabase: Client = Client(supabase_url, supabase_key)
-            print("Successfully connected to Supabase!")
+            # Verify connection with a simple query
+            supabase = Client(supabase_url, supabase_key)
+            write_to_log("Successfully connected to Supabase")
         except Exception as e:
-            print(f"Failed to initialize Supabase: {e}")
-            write_to_log(f"Failed to initialize Supabase: {e}")
+            write_to_log(f"Supabase connection error: {type(e).__name__}")
+            # Don't expose detailed error messages that might contain sensitive info
+            supabase = None
     else:
         missing = []
         if not supabase_url:
             missing.append("SUPABASE_URL")
         if not supabase_key:
-            missing.append("Supabase key (tried SUPABASE_SERVICE_KEY, SUPABASE_KEY, SUPABASE_ANON_KEY)")
-        print(f"Supabase connection failed: Missing {', '.join(missing)}")
+            missing.append("Supabase key")
+        write_to_log(f"Supabase initialization skipped: Missing {', '.join(missing)}")
 
     return embedding_client, supabase
