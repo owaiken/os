@@ -398,12 +398,27 @@ def get_clients():
     # Supabase client setup
     supabase = None
     supabase_url = get_env_var("SUPABASE_URL")
-    supabase_key = get_env_var("SUPABASE_SERVICE_KEY")
+    
+    # Try multiple key names for Supabase
+    supabase_key = None
+    for key_name in ["SUPABASE_SERVICE_KEY", "SUPABASE_KEY", "SUPABASE_ANON_KEY"]:
+        supabase_key = get_env_var(key_name)
+        if supabase_key:
+            print(f"Found Supabase key using variable name: {key_name}")
+            break
+    
     if supabase_url and supabase_key:
         try:
             supabase: Client = Client(supabase_url, supabase_key)
+            print("Successfully connected to Supabase!")
         except Exception as e:
             print(f"Failed to initialize Supabase: {e}")
             write_to_log(f"Failed to initialize Supabase: {e}")
-
-    return embedding_client, supabase      
+    else:
+        missing = []
+        if not supabase_url:
+            missing.append("SUPABASE_URL")
+        if not supabase_key:
+            missing.append("Supabase key (tried SUPABASE_SERVICE_KEY, SUPABASE_KEY, SUPABASE_ANON_KEY)")
+        print(f"Supabase connection failed: Missing {', '.join(missing)}")
+return embedding_client, supabase      
