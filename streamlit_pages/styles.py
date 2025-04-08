@@ -8,23 +8,41 @@ def load_css():
     """
     Load the custom CSS styles for the Owaiken UI with theme support.
     """
-    # Determine if we're in dark mode
-    is_dark_theme = st.get_option("theme.base") == "dark"
-    
+    # Force light theme for better readability
     st.markdown("""
         <style>
+        /* Force light theme with good contrast */
         :root {
-            --primary-color: #000000;  /* Black - based on your logo */
-            --secondary-color: #444444; /* Dark Gray */
-            --text-color: #262730;
-            --logo-filter: none; /* No filter for light theme */
+            --primary-color: #1E88E5;  /* Blue - more visible */
+            --secondary-color: #005CB2; /* Darker Blue */
+            --text-color: #000000; /* Black text for contrast */
+            --background-color: #FFFFFF; /* White background */
+            --logo-filter: none;
         }
         
-        /* Dark theme adjustments */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --logo-filter: invert(1); /* Invert for dark theme */
-            }
+        /* Override Streamlit's theme settings */
+        .main .block-container {
+            background-color: var(--background-color) !important;
+            color: var(--text-color) !important;
+        }
+        
+        /* Make all text black for readability */
+        p, h1, h2, h3, h4, h5, h6, li, span, div {
+            color: var(--text-color) !important;
+        }
+        
+        /* Style warning messages for better visibility */
+        .stAlert {
+            background-color: #FFF3CD !important;
+            color: #856404 !important;
+            border: 1px solid #FFEEBA !important;
+            border-radius: 4px !important;
+            padding: 10px !important;
+            margin-bottom: 16px !important;
+        }
+        
+        .stAlert > div {
+            color: #856404 !important;
         }
         
         /* Style the buttons */
