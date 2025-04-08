@@ -11,6 +11,7 @@ import inspect
 import json
 import sys
 import os
+import re
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -24,18 +25,37 @@ workbench_dir = os.path.join(parent_dir, "workbench")
 def write_to_log(message: str):
     """Write a message to the logs.txt file in the workbench directory.
     
+    Securely logs messages while redacting sensitive information.
+    
     Args:
         message: The message to log
     """
+    # Redact sensitive information from logs
+    redacted_message = message
+    sensitive_patterns = [
+        (r'key[^\s]*[\s]*[:=][\s]*["\']?([\w\-\.]+)["\']?', 'key***=REDACTED'),
+        (r'password[^\s]*[\s]*[:=][\s]*["\']?([\w\-\.]+)["\']?', 'password=REDACTED'),
+        (r'secret[^\s]*[\s]*[:=][\s]*["\']?([\w\-\.]+)["\']?', 'secret=REDACTED'),
+        (r'token[^\s]*[\s]*[:=][\s]*["\']?([\w\-\.]+)["\']?', 'token=REDACTED'),
+        (r'auth[^\s]*[\s]*[:=][\s]*["\']?([\w\-\.]+)["\']?', 'auth=REDACTED'),
+    ]
+    
+    for pattern, replacement in sensitive_patterns:
+        redacted_message = re.sub(pattern, replacement, redacted_message, flags=re.IGNORECASE)
+    
     # Get the directory one level up from the current file
     log_path = os.path.join(workbench_dir, "logs.txt")
     os.makedirs(workbench_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_entry = f"[{timestamp}] {message}\n"
+    log_entry = f"[{timestamp}] {redacted_message}\n"
 
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(log_entry)
+    try:
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(log_entry)
+    except Exception:
+        # Fail silently - logging should never break application functionality
+        pass
 
 def get_env_var(var_name: str, profile: Optional[str] = None) -> Optional[str]:
     """Get an environment variable from the saved JSON file or from environment variables.
