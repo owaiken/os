@@ -2,13 +2,43 @@ services:
   # A web service for the Owaiken Streamlit application
   - type: web
     name: owaiken
-    env: python
+    runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run streamlit_ui.py
+    # Run the fix_render_startup.py script first to ensure environment variables are properly set
+    # Then start the Streamlit application
+    startCommand: python3 fix_render_startup.py && streamlit run streamlit_ui.py
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
+      # OpenAI API for embeddings
       - key: OPENAI_API_KEY
-        sync: false # This means you'll need to set this in the Render dashboard
+        sync: false # Set your OpenAI API key here
+      
+      # OpenRouter configuration for LLM functionality
+      - key: BASE_URL
+        value: "https://openrouter.ai/api/v1"
+      - key: LLM_API_KEY
+        sync: false # Set your OpenRouter API key here
+      - key: PRIMARY_MODEL
+        value: "anthropic/claude-3-7-sonnet"
+      - key: REASONER_MODEL
+        value: "openrouter/quasar-alpha"
+      # Supabase configuration
+      - key: SUPABASE_URL
+        sync: false # Set this in the Render dashboard
+      - key: SUPABASE_SERVICE_KEY
+        sync: false # Set this in the Render dashboard
+      - key: SUPABASE_ANON_KEY
+        sync: false # Set this in the Render dashboard (can be same as SERVICE_KEY)
+      # Keygen.sh licensing configuration
+      - key: KEYGEN_ACCOUNT_ID
+        sync: false # Set this in the Render dashboard
+      - key: KEYGEN_PRODUCT_ID
+        sync: false # Set this in the Render dashboard
+      # Embedding configuration
+      - key: EMBEDDING_BASE_URL
+        value: "https://api.openai.com/v1"
+      - key: EMBEDDING_MODEL
+        value: "text-embedding-3-small"
     autoDeploy: true # Enable automatic deployments from GitHub
     plan: free # Start with the free plan, can upgrade later

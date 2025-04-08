@@ -70,13 +70,10 @@ class LicenseManager:
         is_cloud = self._is_cloud_environment()
         dev_mode = os.environ.get("OWAIKEN_DEV_MODE", "0") == "1"
         
-        # Always bypass license check in cloud environments to avoid API authentication issues
-        if is_cloud or dev_mode:
-            print("⚠️ Running in cloud environment - license check bypassed")
-            # Save the license key if provided to avoid repeated activation attempts
-            if license_key:
-                self._save_license(license_key)
-            return {"valid": True, "message": "License validated in cloud environment", "data": {"meta": {"valid": True}}}
+        # In development mode or cloud environment with TEMPORARY_DEPLOYMENT, always validate
+        if dev_mode or (is_cloud and os.environ.get("TEMPORARY_DEPLOYMENT") == "1"):
+            print("⚠️ Running in development mode or cloud environment - license check bypassed")
+            return {"valid": True, "message": "License validated in development mode", "data": {"meta": {"valid": True}}}
         
         # Use provided key or try to load from saved file
         if license_key:
@@ -94,8 +91,7 @@ class LicenseManager:
             # Validate the license with Keygen.sh
             headers = {
                 "Content-Type": "application/vnd.api+json",
-                "Accept": "application/vnd.api+json",
-                "User-Agent": "Owaiken/1.0"
+                "Accept": "application/vnd.api+json"
             }
             
             # First check if the license exists and is valid
@@ -130,16 +126,7 @@ class LicenseManager:
                         return {"valid": False, "message": "License has been suspended"}
                     else:
                         return {"valid": False, "message": f"License is invalid: {code}"}
-            elif response.status_code == 401:
-                print(f"Authentication error with Keygen API. Please check your account ID and product ID.")
-                print(f"Account ID: {self.account_id[:4]}..." if self.account_id else "Account ID not set")
-                print(f"Product ID: {self.product_id[:4]}..." if self.product_id else "Product ID not set")
-                return {"valid": False, "message": "Authentication error with license server. Please check your credentials."}
-            elif response.status_code == 404:
-                return {"valid": False, "message": "License key not found"}
             else:
-                print(f"Unexpected response from license server: {response.status_code}")
-                print(f"Response body: {response.text[:200]}...")
                 return {"valid": False, "message": f"Error validating license: {response.status_code}"}
                 
         except Exception as e:
@@ -155,11 +142,6 @@ class LicenseManager:
         Returns:
             dict: Activation result with status and message
         """
-        # Always succeed in cloud environments to avoid API authentication issues
-        if self._is_cloud_environment():
-            print("⚠️ Cloud environment detected - license activation automatically succeeded")
-            self._save_license(license_key)
-            return {"success": True, "message": "License activated successfully in cloud environment"}
         if not license_key:
             return {"success": False, "message": "No license key provided"}
             

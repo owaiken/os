@@ -415,7 +415,20 @@ def get_clients():
     # LLM client setup with input validation
     embedding_client = None
     base_url = get_env_var('EMBEDDING_BASE_URL') or 'https://api.openai.com/v1'
-    api_key = get_env_var('EMBEDDING_API_KEY') or 'no-api-key-provided'
+    
+    # Try multiple environment variables for the OpenAI API key
+    api_key = get_env_var('EMBEDDING_API_KEY')
+    if not api_key:
+        # Try OPENAI_API_KEY as a fallback
+        api_key = get_env_var('OPENAI_API_KEY')
+        if api_key:
+            write_to_log("Using OPENAI_API_KEY for embedding client")
+    
+    # If no key is found, use a placeholder but log a warning
+    if not api_key:
+        api_key = None  # Will cause proper error handling below
+        write_to_log("WARNING: No OpenAI API key found in environment variables")
+    
     provider = get_env_var('EMBEDDING_PROVIDER') or 'OpenAI'
     
     # Validate URL format before using
@@ -426,13 +439,20 @@ def get_clients():
     # Setup OpenAI client for LLM with proper error handling
     try:
         if provider == "Ollama":
-            if api_key == "NOT_REQUIRED":
+            if api_key == "NOT_REQUIRED" or not api_key:
                 api_key = "ollama"  # Use a dummy key for Ollama
             embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
         else:
-            embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+            # For OpenAI, ensure we have a valid API key
+            if not api_key:
+                write_to_log("ERROR: OpenAI API key is required but not provided")
+                # Don't create client if no key is available
+            else:
+                embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
     except Exception as e:
         write_to_log(f"Error initializing embedding client: {type(e).__name__}")
+        if "invalid_api_key" in str(e).lower() or "authentication" in str(e).lower():
+            write_to_log("Authentication error: Please check your OpenAI API key")
         # Continue execution - we'll handle the None client downstream
 
     # Supabase client setup with secure credential handling
@@ -458,6 +478,14 @@ def get_clients():
                 break
     else:
         write_to_log("Using SUPABASE_SERVICE_KEY for Supabase connection")
+        
+    # Check for SUPABASE_ANON_KEY but don't automatically set it
+    # This maintains security by not automatically copying keys
+    anon_key = get_env_var("SUPABASE_ANON_KEY")
+    if not anon_key and supabase_key:
+        # Log the missing key but don't automatically set it
+        # This is more secure as it requires explicit configuration
+        write_to_log("SUPABASE_ANON_KEY not found - some operations may require this to be set explicitly")
     
     # Validate URL format
     if supabase_url and not supabase_url.startswith(('http://', 'https://')):
