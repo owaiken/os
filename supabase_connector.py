@@ -1,46 +1,41 @@
 """
 Direct Supabase Connector for Owaiken
 
-This module provides a direct connection to Supabase that bypasses the problematic
-credential loading in the original code.
+This module provides a secure connection to Supabase that works with both
+admin deployments and end-user configurations.
 """
 
 import os
+import streamlit as st
 from supabase import create_client, Client
 
 def get_direct_supabase_client() -> Client:
     """
-    Get a Supabase client by directly accessing environment variables
+    Get a Supabase client by securely accessing credentials
+    
+    This function prioritizes user-specific credentials over deployment credentials,
+    ensuring that users with licenses can connect to their own Supabase instances.
     
     Returns:
         Client: Supabase client or None if connection fails
     """
-    # Hard-coded values from environment variables we know exist
-    supabase_url = "https://effhhuuhualzawjtnczv.supabase.co"
-    print(f"Using hardcoded Supabase URL: {supabase_url}")
-    
-    # Print all environment variables for debugging (redacting sensitive values)
-    print("\n=== ENVIRONMENT VARIABLES ===\n")
-    for key, value in os.environ.items():
-        if any(sensitive in key.lower() for sensitive in ["key", "secret", "password", "token"]):
-            print(f"{key}: [REDACTED]")
-        else:
-            print(f"{key}: {value}")
-    print("\n=== END ENVIRONMENT VARIABLES ===\n")
-    
-    # Get the service key directly
-    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
-    print(f"SUPABASE_SERVICE_KEY found: {supabase_key is not None}")
-    
-    if not supabase_key:
-        # Fallback to other key names
-        for key_name in ["SUPABASE_KEY", "SUPABASE_ANON_KEY"]:
+    # First check for user-specific credentials in Streamlit session state
+    # This ensures users with licenses can use their own Supabase
+    if hasattr(st, 'session_state') and 'user_supabase_url' in st.session_state and 'user_supabase_key' in st.session_state:
+        supabase_url = st.session_state.user_supabase_url
+        supabase_key = st.session_state.user_supabase_key
+        print("Using user-specific Supabase credentials from session state")
+    else:
+        # Fall back to environment variables
+        supabase_url = os.environ.get("SUPABASE_URL")
+        
+        # Try multiple key names for compatibility
+        supabase_key = None
+        for key_name in ["SUPABASE_SERVICE_KEY", "SUPABASE_KEY", "SUPABASE_ANON_KEY"]:
             if key_name in os.environ:
                 supabase_key = os.environ.get(key_name)
-                print(f"Using {key_name} for Supabase connection")
+                print(f"Using {key_name} from environment variables")
                 break
-    else:
-        print("Using SUPABASE_SERVICE_KEY for connection")
     
     if not supabase_url or not supabase_key:
         print("Missing Supabase credentials in environment variables")
