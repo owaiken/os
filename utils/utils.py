@@ -441,13 +441,23 @@ def get_clients():
     # Get credentials from environment with proper validation
     supabase_url = get_env_var("SUPABASE_URL")
     
+    # Handle empty URL case - use hardcoded URL if environment variable is empty
+    if not supabase_url or supabase_url.strip() == "":
+        supabase_url = "https://effhhuuhualzawjtnczv.supabase.co"
+        write_to_log("Using fallback Supabase URL due to empty environment variable")
+    
     # Try multiple key names for Supabase with secure logging
-    supabase_key = None
-    for key_name in ["SUPABASE_SERVICE_KEY", "SUPABASE_KEY", "SUPABASE_ANON_KEY"]:
-        supabase_key = get_env_var(key_name)
-        if supabase_key:
-            write_to_log(f"Using {key_name} for Supabase connection")
-            break
+    # Start with SUPABASE_SERVICE_KEY for compatibility with original Archon
+    supabase_key = get_env_var("SUPABASE_SERVICE_KEY")
+    if not supabase_key:
+        # Fall back to other key names if service key isn't found
+        for key_name in ["SUPABASE_KEY", "SUPABASE_ANON_KEY"]:
+            supabase_key = get_env_var(key_name)
+            if supabase_key:
+                write_to_log(f"Using {key_name} for Supabase connection")
+                break
+    else:
+        write_to_log("Using SUPABASE_SERVICE_KEY for Supabase connection")
     
     # Validate URL format
     if supabase_url and not supabase_url.startswith(('http://', 'https://')):
