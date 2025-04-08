@@ -15,16 +15,32 @@ def get_direct_supabase_client() -> Client:
     Returns:
         Client: Supabase client or None if connection fails
     """
-    # Directly access environment variables
-    supabase_url = os.environ.get("SUPABASE_URL")
+    # Hard-coded values from environment variables we know exist
+    supabase_url = "https://effhhuuhualzawjtnczv.supabase.co"
+    print(f"Using hardcoded Supabase URL: {supabase_url}")
     
-    # Try multiple key names
-    supabase_key = None
-    for key_name in ["SUPABASE_SERVICE_KEY", "SUPABASE_KEY", "SUPABASE_ANON_KEY"]:
-        if key_name in os.environ:
-            supabase_key = os.environ.get(key_name)
-            print(f"Using {key_name} for Supabase connection")
-            break
+    # Print all environment variables for debugging (redacting sensitive values)
+    print("\n=== ENVIRONMENT VARIABLES ===\n")
+    for key, value in os.environ.items():
+        if any(sensitive in key.lower() for sensitive in ["key", "secret", "password", "token"]):
+            print(f"{key}: [REDACTED]")
+        else:
+            print(f"{key}: {value}")
+    print("\n=== END ENVIRONMENT VARIABLES ===\n")
+    
+    # Get the service key directly
+    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
+    print(f"SUPABASE_SERVICE_KEY found: {supabase_key is not None}")
+    
+    if not supabase_key:
+        # Fallback to other key names
+        for key_name in ["SUPABASE_KEY", "SUPABASE_ANON_KEY"]:
+            if key_name in os.environ:
+                supabase_key = os.environ.get(key_name)
+                print(f"Using {key_name} for Supabase connection")
+                break
+    else:
+        print("Using SUPABASE_SERVICE_KEY for connection")
     
     if not supabase_url or not supabase_key:
         print("Missing Supabase credentials in environment variables")
